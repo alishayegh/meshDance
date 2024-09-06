@@ -49,7 +49,7 @@ typedef GeometricField<vector, pointPatchField, pointMesh> pointVectorField;
 typedef GeometricField<vector, fvPatchField, volMesh> volVectorField;
 
 // Move mesh (with corresponding field T) to newMesh and calc Tnew
-void moveMesh
+void advectField
 (
     volScalarField& T,
     volScalarField& Tnew,
@@ -108,8 +108,70 @@ void moveMesh
 	}
 }
 
+// Calc/Assume new mesh points (only internal points, not boundary points)
+pointField& calcNewPoints(fvMesh& mesh, Time& runTime, pointField& newPoints)
+{
+    // Find max coordinates
+    scalar xMax = -GREAT;
+    scalar yMax = -GREAT;
+    scalar zMax = -GREAT;
+
+    scalar xMin = GREAT;
+    scalar yMin = GREAT;
+    scalar zMin = GREAT;
+
+    forAll(newPoints, pointI)
+    {
+        xMax = max(mesh.points()[pointI][0], xMax);
+        yMax = max(mesh.points()[pointI][1], yMax);
+        zMax = max(mesh.points()[pointI][2], zMax);
+
+        xMin = min(mesh.points()[pointI][0], xMin);
+        yMin = min(mesh.points()[pointI][1], yMin);
+        zMin = min(mesh.points()[pointI][2], zMin);
+    }
+
+    scalar scale(1e-2);
+
+    forAll(newPoints, pointI)
+    {
+    	// Avoid moving boundary points
+        if 
+    	(
+             newPoints[pointI][0] != xMax || newPoints[pointI][0] != xMin
+          || newPoints[pointI][1] != yMax || newPoints[pointI][1] != yMin
+          || newPoints[pointI][2] != zMax || newPoints[pointI][2] != zMin
+    	)
+        newPoints[pointI][0] = mesh.points()[pointI][0] * (1 - (xMax - mesh.points()[pointI][0])/(VSMALL + xMax) * scale);
+        newPoints[pointI][1] = mesh.points()[pointI][1] * (1 - (yMax - mesh.points()[pointI][1])/(VSMALL + yMax) * scale);
+        newPoints[pointI][2] = mesh.points()[pointI][2] * (1 - (zMax - mesh.points()[pointI][2])/(VSMALL + zMax) * scale);
+    }
+
+	return newPoints;
+}
+
+pointVectorField& calcUb
+(
+    pointVectorField& Ub,
+	fvMesh& newMesh,
+	fvMesh& mesh,
+	Time& runTime
+)
+{
+	Info << "Read/Calculate/Assume mesh velocity field" << endl;
+	forAll(Ub, UbI)
+	{
+	    Ub.internalField()[UbI][0] = ((newMesh.points()[UbI][0] - mesh.points()[UbI][0]) / (VSMALL + runTime.deltaT().value()));//.value();
+	    Ub.internalField()[UbI][1] = ((newMesh.points()[UbI][1] - mesh.points()[UbI][1]) / (VSMALL + runTime.deltaT().value()));//.value();
+	    Ub.internalField()[UbI][2] = ((newMesh.points()[UbI][2] - mesh.points()[UbI][2]) / (VSMALL + runTime.deltaT().value()));//.value();
+	}
+
+	return Ub;
+}
+
 int main(int argc, char* argv[])
 {
+	// Create time
     argList args(argc, argv);
 
 	Time runTime
@@ -128,7 +190,6 @@ int main(int argc, char* argv[])
 	//
 
 	// Read the mesh
-
 	IOobject meshIO
 	(
 		fvMesh::defaultRegion,
@@ -138,108 +199,28 @@ int main(int argc, char* argv[])
 		IOobject::NO_WRITE
 	);
 
-	fvMesh mesh(meshIO);
+	//fvMesh mesh(meshIO);
+    autoPtr<fvMesh> meshPtr
+	(
+	    new fvMesh(meshIO)
+	);
 
 	// Read material velocity
-	//typedef GeometricField<vector, fvPatchField, volMesh> volVectorField;
-    //      GeometricField<vector, fvPatchField, volMesh> volVectorField;
 	volVectorField U
 	(
 	    IOobject
 		(
 		    "U",
 			runTime.timeName(),
-			mesh,
+			meshPtr(),
 			IOobject::MUST_READ//,
 			//IOobject::AUTO_WRITE
 		),
-		mesh
+		meshPtr()
 	);
 
-	// Calc/Assume new mesh points (only internal points, not boundary points)
-	pointField newPoints = mesh.points();
-
-	// Find max coordinates
-	scalar xMax = -GREAT;
-	scalar yMax = -GREAT;
-	scalar zMax = -GREAT;
-
-	scalar xMin = GREAT;
-	scalar yMin = GREAT;
-	scalar zMin = GREAT;
-
-	forAll(newPoints, pointI)
-	{
-	    xMax = max(mesh.points()[pointI][0], xMax);
-	    yMax = max(mesh.points()[pointI][1], yMax);
-	    zMax = max(mesh.points()[pointI][2], zMax);
-
-	    xMin = min(mesh.points()[pointI][0], xMin);
-	    yMin = min(mesh.points()[pointI][1], yMin);
-	    zMin = min(mesh.points()[pointI][2], zMin);
-	}
-
-	scalar scale(50e-2);
-
-	forAll(newPoints, pointI)
-	{
-		// Avoid moving boundary points
-	    if 
-		(
-             newPoints[pointI][0] != xMax || newPoints[pointI][0] != xMin
-          || newPoints[pointI][1] != yMax || newPoints[pointI][1] != yMin
-          || newPoints[pointI][2] != zMax || newPoints[pointI][2] != zMin
-		)
-	    newPoints[pointI][0] = mesh.points()[pointI][0] * (1 - (xMax - mesh.points()[pointI][0])/(VSMALL + xMax) * runTime.deltaT().value());
-	    newPoints[pointI][1] = mesh.points()[pointI][1] * (1 - (yMax - mesh.points()[pointI][1])/(VSMALL + yMax) * runTime.deltaT().value());
-	    newPoints[pointI][2] = mesh.points()[pointI][2] * (1 - (zMax - mesh.points()[pointI][2])/(VSMALL + zMax) * runTime.deltaT().value());
-	}
-
-	// Create the new mesh
-	fvMesh newMesh
-	(
-		meshIO,
-		xferCopy(newPoints),
-		xferCopy(mesh.faces()),
-		xferCopy(mesh.faceOwner()),
-		xferCopy(mesh.faceNeighbour())
-	);
-
-	boundaryMesh bMesh;//(mesh.boundaryMesh().size()); // <- no such
-	                                                   //    a constructor
-	bMesh.read(mesh);
-
-	List<polyPatch*> patches(mesh.boundaryMesh().size());
-
-	forAll(patches, patchI)
-	{
-		autoPtr<polyPatch> newPatchPtr
-		(
-		    new polyPatch
-			(
-			    bMesh.patches()[patchI].name(),
-				bMesh.patches()[patchI].size(),
-				bMesh.patches()[patchI].start(),
-				bMesh.patches()[patchI].index(),
-				mesh.boundaryMesh()
-			)
-		);
-
-	    patches[patchI] = newPatchPtr.ptr();
-	}
-
-	newMesh.addPatches(patches);
-
-	// Read/Calculate/Assume mesh velocity field
-	//typedef GeometricField<vector, pointPatchField, pointMesh> pointVectorField;
-
-	pointMesh pMesh(mesh);
-
-    //wordList types
-	//(
-	//    pMesh.boundary().size(),
-	//	calculatedFvPatchVectorField::typeName
-	//);
+	// Calculate cell face velocity field
+	pointMesh pMesh(meshPtr());
 
 	pointVectorField Ub
 	(
@@ -247,32 +228,16 @@ int main(int argc, char* argv[])
 		(
 		    "Ub",
 			runTime.timeName(),
-			mesh//,
+			meshPtr()//,
 			//IOobject::NO_READ,
 			//IOobject::AUTO_WRITE
 		),
 		pMesh,
 		dimensionedVector("Ub", dimLength/dimTime, vector::zero)//,
-		//types
 	);
-
-	Info << "Read/Calculate/Assume mesh velocity field" << endl;
-	forAll(Ub, UbI)
-	{
-	    //Ub[UbI][0] (newMesh.points()[UbI][0] - mesh.points()[UbI][0]) / (VSMALL + runTime.deltaT());
-	    //Ub[UbI][0] = double((newMesh.points()[UbI][0] - mesh.points()[UbI][0]) / (VSMALL + runTime.deltaT()));
-	    //Ub[UbI][0] = dimensionedScalar("Ub0", dimLength, (newMesh.points()[UbI][0] - mesh.points()[UbI][0])) / (VSMALL + runTime.deltaT());
-	    Ub.internalField()[UbI][0] = ((newMesh.points()[UbI][0] - mesh.points()[UbI][0]) / (VSMALL + runTime.deltaT().value()));//.value();
-	    Ub.internalField()[UbI][1] = ((newMesh.points()[UbI][1] - mesh.points()[UbI][1]) / (VSMALL + runTime.deltaT().value()));//.value();
-	    Ub.internalField()[UbI][2] = ((newMesh.points()[UbI][2] - mesh.points()[UbI][2]) / (VSMALL + runTime.deltaT().value()));//.value();
-	}
-	
-	// Return Ub at the face centre
-	// face.average(mesh.points(), Ub);
 
 	// Read the existing scalar field
 	Info << "Read the existing scalar field" << endl;
-	//typedef GeometricField<scalar, fvPatchField, volMesh> volScalarField;
 
 	volScalarField T
 	(
@@ -280,40 +245,137 @@ int main(int argc, char* argv[])
 		(
 		    "T",
 			runTime.timeName(),
-			mesh,
+			meshPtr(),
 			IOobject::MUST_READ,
 			IOobject::AUTO_WRITE
 		),
-		mesh
+		meshPtr()
 	);
 
-	volScalarField Tnew
-	(
-	    IOobject
+    //autoPtr<fvMesh> newMeshPtr(&mesh);
+
+	/*
+	Info << "mesh faces are " << endl;
+	forAll(meshPtr().faces(), faceI)
+	{
+	    Info << faceI << endl;
+	}
+	*/
+	Info << "Read boundaryMesh" << endl;
+	boundaryMesh bMesh;//(mesh.boundaryMesh().size()); // <- no such
+
+	List<polyPatch*> patches(meshPtr().boundaryMesh().size());
+
+	scalar maxIter(10);
+
+	for (int i=0; i < maxIter; ++i)
+	{
+	    // Create the new mesh
+
+		Info << "Read points of the old mesh" << endl;
+        pointField newPoints = meshPtr().points();
+
+		Info << "Create the new mesh" << endl;
+		autoPtr<fvMesh> newMeshPtr
 		(
-		    //"Tnew",
-		    "T",
-			runTime.timeName(),
-			newMesh,
-			IOobject::NO_READ,
-			IOobject::AUTO_WRITE
-		),
-		newMesh,
-		dimensionedScalar("Tnew", dimTemperature, 0)
-	);
+		    new fvMesh
+	        (
+	        	meshIO,
+	        	xferCopy(calcNewPoints(meshPtr(), runTime, newPoints)),
+	        	xferCopy(meshPtr().faces()),
+	        	xferCopy(meshPtr().faceOwner()),
+	        	xferCopy(meshPtr().faceNeighbour())
+	        )
+		);
 
-	Info << "Calculate the new values for the scalar field" << endl;
+		/*
+		forAll(newMeshPtr().faces(), faceI)
+		{
+		    Info << faceI << endl;
+		}
+		*/
 
-	moveMesh(T, Tnew, mesh, newMesh, Ub, U, runTime);
+	    // Create boundaries to be added to the newMesh
+		//Info << meshPtr().boundaryMesh() << endl;
+		//Info << meshPtr() << endl;
+	    Info << "Init list of patch pointers" << endl;
+        //Info << "meshPtr().boundaryMesh().size() = " << meshPtr().boundaryMesh().size() << endl;
 
-	runTime++;
+	    bMesh.read(meshPtr());
 
-	Info << "Correct boundary conditions" << endl;
-	Tnew.correctBoundaryConditions();
+		Info << "Create the list of patch pointers" << endl;
+	    forAll(patches, patchI)
+	    {
+	    	//Info << "bMesh.patches()[patchI].name(), = " << bMesh.patches()[patchI].name()  << endl;
+	    	//Info << "bMesh.patches()[patchI].size(), = " << bMesh.patches()[patchI].size()  << endl;
+	    	//Info << "bMesh.patches()[patchI].start(),= " << bMesh.patches()[patchI].start() << endl;
+	    	//Info << "bMesh.patches()[patchI].index(),= " << bMesh.patches()[patchI].index() << endl;
+	    	autoPtr<polyPatch> newPatchPtr
+	    	(
+	    	    new polyPatch
+	    		(
+	    		    bMesh.patches()[patchI].name(),
+	    			bMesh.patches()[patchI].size(),
+	    			bMesh.patches()[patchI].start() 
+				  + meshPtr().nInternalFaces(),
+	    			bMesh.patches()[patchI].index(),
+	    			meshPtr().boundaryMesh()
+	    		)
+	    	);
 
-	Info << "Write results" << endl;
-	//T.write();
-	//Tnew.write();
-	//Tf.write();
-	newMesh.write(); // <- does this write T, as T is registered with newMesh? no!
+	        patches[patchI] = newPatchPtr.ptr();
+	    }
+
+		//if (i != 0)
+		//{
+        Info << "Add patches" << endl;
+		//Info << newMeshPtr() << endl;
+	    //newMeshPtr().removePatches();
+		//Info << "boundary size before adding patches = " << newMeshPtr().boundaryMesh().size() << endl;
+	    newMeshPtr().addPatches(patches);
+		//}
+	    
+	    // Create the scalarField on the new mesh
+		Info << "Create the new scalar field" << endl;
+	    volScalarField Tnew
+	    (
+	        IOobject
+	    	(
+	    	    //"Tnew",
+	    	    "T",
+	    		runTime.timeName(),
+	    		newMeshPtr(),
+	    		IOobject::NO_READ,
+	    		IOobject::AUTO_WRITE
+	    	),
+	    	newMeshPtr(),
+	    	dimensionedScalar("Tnew", dimTemperature, 0)
+	    );
+
+	    // Advect field
+	    Info << "Calculate the new values for the scalar field" << endl;
+
+	    advectField(T, Tnew, meshPtr(), newMeshPtr(), calcUb(Ub, newMeshPtr(), meshPtr(), runTime), U, runTime);
+
+		//Info << "before" <<  meshPtr() << endl;
+		//meshPtr = newMeshPtr; // <- segfaults at the second iter
+		//meshPtr.reset(newMeshPtr); // <- Error: no matching function
+		meshPtr.reset(newMeshPtr.ptr());
+
+		//meshPtr.reset(newMeshPtr.ptr());
+		//Info << "after" << meshPtr() << endl;
+		//meshPtr.reset(newMeshPtr);
+
+	    Info << "Correct boundary conditions" << endl;
+	    Tnew.correctBoundaryConditions();
+
+		//if(i == maxIter)
+		//{
+	        runTime++;
+
+	        Info << "Write results" << endl;
+	        meshPtr().write(); // <- does this write T, as T is registered with newMesh? no!
+	                 // Sorry! yes! Previously Tnew was registered with mesh, not newMesh!
+		//}
+	}
 }
