@@ -92,6 +92,10 @@ volScalarField advectField
 						     );
     const cellList& cells = newMesh.cells();
 
+	//
+	// Explicit
+	//
+
 	forAll(cells, cellI)
 	{
 		Tnew().internalField()[cellI] = T.internalField()[cellI] * mesh.V()[cellI];
@@ -129,6 +133,14 @@ volScalarField advectField
 
 	    Tnew().internalField()[cellI] /= (VSMALL + newMesh.V()[cellI]); 
 	}
+
+	//
+	// Implicit
+	//
+    fvScalarMatrix TEq
+	(
+	    fvm::ddt(T) == fvc::ddt(T) - fvm::div(phi, T) + fvm::div(meshPhi, T)
+	);
 
 	Tnew().correctBoundaryConditions();
 	
