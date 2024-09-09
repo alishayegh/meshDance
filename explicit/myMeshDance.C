@@ -104,7 +104,7 @@ volScalarField advectField
 			Tnew().internalField()[cellI] +=
 			(
 			    // T on face
-                (fvc::interpolate(T)())[cell[faceI]]
+                (fvc::interpolate(T)())[cell[faceI]] // <- Unconditionally unstable
 			    //0;
 
 			    // face area
@@ -113,6 +113,8 @@ volScalarField advectField
 			  & (
 			      	// boundary velocity
                     cellFace.average(mesh.points(), Ub) 
+				    // material velocity
+                  //- cellFace.average(mesh.points(), U) 
 		        )
 			  * runTime.deltaT()
 			).value();
@@ -121,6 +123,9 @@ volScalarField advectField
 
 			//	    (fvc::interpolate(Ub)())[mesh.cells()[cellI][faceI]] // <- Error: No matching for interpolate pointVectorField
 		}
+
+		//Tnew() += 
+		//((fvc::ddt(T)())[cellI] * /* mesh.V()[cellI]*/  runTime.deltaT());//value();
 
 	    Tnew().internalField()[cellI] /= (VSMALL + newMesh.V()[cellI]); 
 	}
@@ -153,7 +158,7 @@ pointField newPoints(const fvMesh& mesh)
         zMin = min(mesh.points()[pointI][2], zMin);
     }
 
-    scalar scale(1e-3);
+    scalar scale(5e-3);
 
     tmp<pointField> pfPtr(new pointField(mesh.points()));
 
