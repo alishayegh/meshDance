@@ -90,27 +90,31 @@ volScalarField advectField
 									  dimensionedScalar("0", T.dimensions(), 0)
 								  )
 						     );
+    const cellList& cells = newMesh.cells();
 
-	forAll(newMesh.cells(), cellI)
+	forAll(cells, cellI)
 	{
 		Tnew().internalField()[cellI] = T.internalField()[cellI] * mesh.V()[cellI];
 
-	    forAll(newMesh.cells()[cellI], faceI)
+	    const cell& cell = cells[cellI];
+
+	    forAll(cell, faceI)
 		{
+			const face& cellFace = mesh.faces()[cell[faceI]];
 			Tnew().internalField()[cellI] +=
 			(
 			    // T on face
-                (fvc::interpolate(T)())[mesh.cells()[cellI][faceI]]
+                (fvc::interpolate(T)())[cell[faceI]]
 			    //0;
 
 			    // face area
-			    * mesh.faces()[mesh.cells()[cellI][faceI]].normal(mesh.points())
+			  * cellFace.normal(mesh.points())
 
-			    & (
+			  & (
 			      	// boundary velocity
-                    -mesh.faces()[newMesh.cells()[cellI][faceI]].average(mesh.points(), Ub) 
-		          )
-			    * runTime.deltaT()
+                    cellFace.average(mesh.points(), Ub) 
+		        )
+			  * runTime.deltaT()
 			).value();
 
 			//        /*newMesh.cells()[cellI][faceI] <- Does not return a face, but faceLabel*/
