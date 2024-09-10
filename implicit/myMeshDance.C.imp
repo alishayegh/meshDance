@@ -73,6 +73,7 @@ volScalarField advectField
 	                   );
 	*/
 
+	/*
 	IOobject IO 
 	(
 	    T.name(), 
@@ -90,49 +91,51 @@ volScalarField advectField
 									  dimensionedScalar("0", T.dimensions(), 0)
 								  )
 						     );
+	*/
+
     const cellList& cells = newMesh.cells();
 
 	//
 	// Explicit
 	//
 
-	forAll(cells, cellI)
-	{
-		Tnew().internalField()[cellI] = T.internalField()[cellI] * mesh.V()[cellI];
+	//forAll(cells, cellI)
+	//{
+	//	Tnew().internalField()[cellI] = T.internalField()[cellI] * mesh.V()[cellI];
 
-	    const cell& cell = cells[cellI];
+	//    const cell& cell = cells[cellI];
 
-	    forAll(cell, faceI)
-		{
-			const face& cellFace = mesh.faces()[cell[faceI]];
-			Tnew().internalField()[cellI] +=
-			(
-			    // T on face
-                (fvc::interpolate(T)())[cell[faceI]] // <- Unconditionally unstable
-			    //0;
+	//    forAll(cell, faceI)
+	//	{
+	//		const face& cellFace = mesh.faces()[cell[faceI]];
+	//		Tnew().internalField()[cellI] +=
+	//		(
+	//		    // T on face
+    //            (fvc::interpolate(T)())[cell[faceI]] // <- Unconditionally unstable
+	//		    //0;
 
-			    // face area
-			  * cellFace.normal(mesh.points())
+	//		    // face area
+	//		  * cellFace.normal(mesh.points())
 
-			  & (
-			      	// boundary velocity
-                    cellFace.average(mesh.points(), Ub) 
-				    // material velocity
-                  //- cellFace.average(mesh.points(), U) 
-		        )
-			  * runTime.deltaT()
-			).value();
+	//		  & (
+	//		      	// boundary velocity
+    //                cellFace.average(mesh.points(), Ub) 
+	//			    // material velocity
+    //              //- cellFace.average(mesh.points(), U) 
+	//	        )
+	//		  * runTime.deltaT()
+	//		).value();
 
-			//        /*newMesh.cells()[cellI][faceI] <- Does not return a face, but faceLabel*/
+	//		//        /*newMesh.cells()[cellI][faceI] <- Does not return a face, but faceLabel*/
 
-			//	    (fvc::interpolate(Ub)())[mesh.cells()[cellI][faceI]] // <- Error: No matching for interpolate pointVectorField
-		}
+	//		//	    (fvc::interpolate(Ub)())[mesh.cells()[cellI][faceI]] // <- Error: No matching for interpolate pointVectorField
+	//	}
 
-		//Tnew() += 
-		//((fvc::ddt(T)())[cellI] * /* mesh.V()[cellI]*/  runTime.deltaT());//value();
+	//	//Tnew() += 
+	//	//((fvc::ddt(T)())[cellI] * /* mesh.V()[cellI]*/  runTime.deltaT());//value();
 
-	    Tnew().internalField()[cellI] /= (VSMALL + newMesh.V()[cellI]); 
-	}
+	//    Tnew().internalField()[cellI] /= (VSMALL + newMesh.V()[cellI]); 
+	//}
 
 	//
 	// Implicit
@@ -142,9 +145,11 @@ volScalarField advectField
 	    fvm::ddt(T) == fvc::ddt(T) - fvm::div(phi, T) + fvm::div(meshPhi, T)
 	);
 
-	Tnew().correctBoundaryConditions();
-	
-	return Tnew();
+	TEq.solve();
+
+	T.correctBoundaryConditions();
+
+	return T;
 }
 
 // Calc/Assume new mesh points (only internal points, not boundary points)
