@@ -31,6 +31,9 @@ The implicit form reads
 fvm::ddt(T) == fvc::ddt(T) + fvm::div(meshPhi, T) - fvm::div(phi, T)
 ```
 
+## Example
+![](|width=100)![](|width=100)
+
 ## Dependencies
 foam-extend-4.0
 
