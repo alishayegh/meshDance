@@ -93,7 +93,7 @@ volScalarField advectField
 						     );
 	*/
 
-    const cellList& cells = newMesh.cells();
+    //const cellList& cells = newMesh.cells();
 
 	//
 	// Explicit
@@ -142,7 +142,7 @@ volScalarField advectField
 	//
     fvScalarMatrix TEq
 	(
-	    fvm::ddt(T) == fvc::ddt(T) - fvm::div(phi, T) + fvm::div(meshPhi, T)
+	    fvm::ddt(T) == fvc::ddt(T) /*- fvm::div(phi, T)*/ + fvm::div(meshPtr().phi(), T)
 	);
 
 	TEq.solve();
@@ -201,6 +201,7 @@ pointField newPoints(const fvMesh& mesh)
 	return pfPtr();
 }
 
+/*
 pointVectorField Ub
 (
 	const fvMesh& newMesh,
@@ -245,6 +246,7 @@ pointVectorField Ub
 
 	return tUb();
 }
+*/
 
 int main(int argc, char* argv[])
 {
@@ -289,8 +291,8 @@ int main(int argc, char* argv[])
 		(
 		    "U",
 			runTime.timeName(),
-			meshPtr()//,
-			//IOobject::MUST_READ
+			meshPtr(),
+			IOobject::READ_IF_PRESENT
 		),
 		meshPtr(),
 		dimensionedVector("0", dimLength/dimTime, vector::zero)
@@ -299,7 +301,7 @@ int main(int argc, char* argv[])
 	// Read the existing scalar field
 	Info << "Read the existing scalar field" << endl;
 
-	autoPtr<volScalarField> TOldPtr
+	autoPtr<volScalarField> T//OldPtr
 	(
 	    new volScalarField
 	    (
@@ -322,40 +324,45 @@ int main(int argc, char* argv[])
 
 	List<polyPatch*> patches(meshPtr().boundaryMesh().size());
 
-	scalar maxIter(10);
+	//scalar maxIter(10);
 
-	for (int i=0; i < maxIter; ++i)
+	while (runTime.run())
 	{
+	    runTime++;
 	    // Create the new mesh
 
 		//if(meshPtr.valid())
 		//{
 			
-		    Info << "Create the new mesh" << endl;
-		    autoPtr<fvMesh> newMeshPtr
-		    (
-		        new fvMesh
-	            (
-	            	meshIO,
-	            	xferCopy(newPoints(meshPtr())),
-		    		//faces,
-		    		//owners,
-		    		//neighbours
-                    xferCopy(meshPtr().faces()),
-                    xferCopy(meshPtr().faceOwner()),
-                    xferCopy(meshPtr().faceNeighbour())
-	            )
-		    );
+		/*
+		Info << "Create the new mesh" << endl;
+		autoPtr<fvMesh> newMeshPtr
+		(
+		    new fvMesh
+	        (
+	        	meshIO,
+	        	xferCopy(newPoints(meshPtr())),
+				//faces,
+				//owners,
+				//neighbours
+                xferCopy(meshPtr().faces()),
+                xferCopy(meshPtr().faceOwner()),
+                xferCopy(meshPtr().faceNeighbour())
+	        )
+		);
+		*/
 
-			if(newMeshPtr.valid())
-			{
-			    Info << "newMeshPtr assigned successfully" << endl;
-			}
-			else
-			{
-		        FatalErrorIn("newMeshPtr is not set")
-			        << exit(FatalError);
-			}
+		/*
+		if(newMeshPtr.valid())
+		{
+		    Info << "newMeshPtr assigned successfully" << endl;
+		}
+		else
+		{
+		    FatalErrorIn("newMeshPtr is not set")
+		        << exit(FatalError);
+		}
+		*/
 		//}
 		//else
 		//{
@@ -367,20 +374,25 @@ int main(int argc, char* argv[])
 
 		//if(newMeshPtr.valid())
 		//{
-		    //newMeshPtr -> boundaryMesh().transfer(meshPtr().boundaryMesh()); // <- Error: discards qualifiers
+		//newMeshPtr -> boundaryMesh().transfer(meshPtr().boundaryMesh()); // <- Error: discards qualifiers
 
-	        Info << "Create the list of patch pointers" << endl;
+		/*
+	    Info << "Create the list of patch pointers" << endl;
 		
-	        forAll(patches, patchI)
-	        {
-	            patches[patchI] = meshPtr().boundaryMesh()[patchI].clone(newMeshPtr->boundaryMesh()).ptr();
+	    forAll(patches, patchI)
+	    {
+	        patches[patchI] = meshPtr().boundaryMesh()[patchI].clone(newMeshPtr->boundaryMesh()).ptr();
 
-	        	//&meshPtr().boundaryMesh()[patchI]; // <- Error: const to non-const conversion
-	        }
+	    	//&meshPtr().boundaryMesh()[patchI]; // <- Error: const to non-const conversion
+	    }
 
-            Info << "Add patches" << endl;
-	        //newMeshPtr().addFvPatches(meshReader::polyBoundaryPatches(meshPtr())); // <- the function can be used for objects of type meshReader only
-	        newMeshPtr->addFvPatches(patches);
+        Info << "Add patches" << endl;
+	    //newMeshPtr().addFvPatches(meshReader::polyBoundaryPatches(meshPtr())); // <- the function can be used for objects of type meshReader only
+	    newMeshPtr->addFvPatches(patches);
+
+		meshPtr.reset(newMeshPtr.ptr());
+		*/
+
 		//}
 		//else
 		//{
@@ -388,70 +400,90 @@ int main(int argc, char* argv[])
 		//	    << exit(FatalError);
 		//}
 	    
-        autoPtr<volScalarField> TPtr;
+        //autoPtr<volScalarField> TPtr;
 
-		if (TOldPtr.valid() /*&& newMeshPtr.valid()*/)
-		{
-            autoPtr<volScalarField> TPtr 
-		    (
-		        new volScalarField
-    	        (
-    	            //tIO(), 
-	                IOobject
-		            (
-		                TOldPtr().name(),
-		            	runTime.timeName(),
-		            	newMeshPtr(),
-		            	IOobject::NO_READ,
-		            	IOobject::AUTO_WRITE
-		            ),
-    	       	    newMeshPtr(),
-    	       	    dimensionedScalar("0", TOldPtr().dimensions(), 0)
-    	        )
-    	    );
-		}
-		else
-		{
-		    FatalErrorIn("newMeshPtr or TOldPtr are not valid")
-			    << exit(FatalError);
-		}
+		//(TOldPtr.valid() /*&& newMeshPtr.valid()*/)
+		
+		/*
+        autoPtr<volScalarField> TPtr 
+		(
+		    new volScalarField
+    	    (
+    	        //tIO(), 
+	            IOobject
+		        (
+		            TOldPtr().name(),
+		        	runTime.timeName(),
+		        	newMeshPtr(),
+		        	IOobject::NO_READ,
+		        	IOobject::AUTO_WRITE
+		        ),
+    	   	    newMeshPtr(),
+    	   	    dimensionedScalar("0", TOldPtr().dimensions(), 0)
+    	    )
+    	);
+		*/
 
+		meshPtr().movePoints(newPoints(meshPtr()));
+		
 	    // Advect field
 	    Info << "Calculate the new values for the scalar field" << endl;
 
-	    TPtr.reset(new volScalarField(advectField(TOldPtr(), meshPtr(), newMeshPtr(), Ub(newMeshPtr(), meshPtr(), runTime), U, runTime)));
+	    //TPtr.reset(new volScalarField(advectField(TOldPtr(), meshPtr(), newMeshPtr(), Ub(newMeshPtr(), meshPtr(), runTime), U, runTime)));
 
-	    runTime++;
+        fvScalarMatrix TEq
+	    (
+	        fvm::ddt(T) == fvc::ddt(T) /*- fvm::div(phi, T)*/ + fvm::div(meshPtr().phi(), T)
+	    );
+
+	    TEq.solve();
+
+	    T.correctBoundaryConditions();
+
+	    //runTime++;
 
 	    Info << "Write mesh to " << runTime.timeName() << endl;
 
-		if(newMeshPtr.valid())
+		if(meshPtr.valid())
 		{
-	        newMeshPtr().write(); // <- does this write T, as T is registered with newMesh? no!
+	        meshPtr().write(); // <- does this write T, as T is registered with newMesh? no!
+		}
+
+		/*
+		if (TPtr.valid())
+		{
 			TPtr().write();
 		}
+		*/
+
 	    //Info << "Write field to " << runTime.timeName() << endl;
 		//TPtr().write();
 	                 // Sorry! yes! Previously Tnew was registered with mesh, not newMesh!
 
 		// Update mesh and field pointers
-		TOldPtr = TPtr;
+		//TOldPtr = TPtr;
 		//TOldPtr.reset(TPtr.ptr());
+
+		/*
 		if(!TOldPtr.valid())
 		{
 		    FatalErrorIn("TOldPtr not valid")
 			    << exit(FatalError);
 		}
+		*/
 
 		//meshPtr.reset(newMeshPtr.ptr());  
 		//meshPtr = newMeshPtr; // <- Causes newMeshPtr become invalid
 		//meshPtr = newMeshPtr; // <- segfaults at the second iter
 		//meshPtr.reset(newMeshPtr); // <- Error: no matching function
+		/*
 		meshPtr.reset(newMeshPtr.ptr()); 
+
 		if(!meshPtr.valid())
 		{
 		    FatalErrorIn("meshPtr not valid")
 			    << exit(FatalError);
 		}
+		*/
 	}
 }
