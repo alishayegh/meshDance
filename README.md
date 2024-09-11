@@ -33,6 +33,7 @@ Therefore, the implicit form for T reads
 $$
 \frac{{(TV)}^N-{(TV)}^o}{\Delta t} = \sum_f T S_i{u_b}_i
 $$
+
 and in OpenFOAM notation,
 
 ```c++
