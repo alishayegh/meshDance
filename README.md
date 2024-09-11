@@ -19,14 +19,7 @@ $$
 \frac{{(TV)}^N-{(TV)}^o}{\Delta t} = (\frac{\mathrm{d}T}{\mathrm{d}t})_PV_P + \sum_f T S_i ({u_b}_i - {u}_i)
 $$
 
-where superscripts $\mathrm{N}$ and $\mathrm{O}$ stand for new and old. Since we are looking at a snapshot (fixed time) while we move the mesh, we have
-$
-(\frac{\mathrm{d}T}{\mathrm{d}t})_P = 0 
-$
-(no field generation or destruction) and
-$
-{u}_i = \mathbf{0}
-$
+where superscripts $\mathrm{N}$ and $\mathrm{O}$ stand for new and old. Since we are looking at a snapshot (fixed time) while we move the mesh, we have $(\frac{\mathrm{d}T}{\mathrm{d}t})_P = 0$ (no field generation or destruction) and ${u}_i = \mathbf{0}$
 (again, since it is a fixed point in time). In other words, `time' variable in the mesh motion is not the physical time.
 Therefore, the implicit form for T reads  
 
