@@ -19,17 +19,30 @@ $$
 \frac{{(TV)}^N-{(TV)}^o}{\Delta t} = (\frac{\mathrm{d}T}{\mathrm{d}t})_PV_P + \sum_f T S_i ({u_b}_i - {u}_i)
 $$
 
-where superscripts $\mathrm{N}$ and $\mathrm{O}$ stand for new and old. Solving this explicitly for $T^N$ reads  
+where superscripts $\mathrm{N}$ and $\mathrm{O}$ stand for new and old. Since we are looking at a snapshot (fixed time) while we move the mesh, we have
+$
+(\frac{\mathrm{d}T}{\mathrm{d}t})_P = 0 
+$
+(no field generation or destruction) and
+$
+{u}_i = \mathbf{0}
+$
+(again, since it is a fixed point in time). In other words, `time' variable in the mesh motion is not the physical time.
+Therefore, the implicit form for T reads  
 
 $$
-{{T}^N} = \frac{1}{V^N}[{(TV)}^o + [(\frac{\mathrm{d}T}{\mathrm{d}t})_PV_P + \sum_f T S_i ({u_b}_i - {u}_i)]{\Delta t}]
+\frac{{(TV)}^N-{(TV)}^o}{\Delta t} = \sum_f T S_i{u_b}_i
 $$
-
-The implicit form reads  
+and in OpenFOAM notation,
 
 ```c++
-fvm::ddt(T) == fvc::ddt(T) + fvm::div(meshPhi, T) - fvm::div(phi, T)
+fvm::ddt(T) == fvm::div(mesh.phi(), T) 
 ```
+Also, solving this explicitly for $T^N$ reads  
+
+$$
+{{T}^N} = \frac{1}{V^N}[{(TV)}^o + [\sum_f T S_i {u_b}_i]{\Delta t}]
+$$
 
 ## Example
 ![](https://github.com/alishayegh/meshDance/blob/master/figures/ALE_cavity_meshOnly.gif)  
