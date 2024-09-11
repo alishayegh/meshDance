@@ -150,6 +150,23 @@ int main(int argc, char* argv[])
 		dimensionedVector("0", dimLength/dimTime, vector::zero)
 	);
 
+	//#include "createPhi.H";
+
+    Info<< "Reading/calculating face flux field phi\n" << endl;
+    
+    surfaceScalarField phi
+    (
+        IOobject
+        (
+            "phi",
+            runTime.timeName(),
+            meshPtr(),
+            IOobject::READ_IF_PRESENT,
+            IOobject::AUTO_WRITE
+        ),
+        linearInterpolate(U) & meshPtr().Sf()
+    );
+
 	// Read the existing scalar field
 	Info << "Read the existing scalar field" << endl;
 
@@ -187,7 +204,7 @@ int main(int argc, char* argv[])
 
         fvScalarMatrix TEq
 	    (
-	        fvm::ddt(TPtr()) == fvc::ddt(TPtr()) /*- fvm::div(phi, T)*/ + fvm::div(meshPtr().phi(), TPtr())
+	        fvm::ddt(TPtr()) == /*fvc::ddt(TPtr()) - fvm::div(phi, TPtr()) +*/ fvm::div(meshPtr().phi(), TPtr())
 	    );
 
 	    TEq.solve();
@@ -196,17 +213,18 @@ int main(int argc, char* argv[])
 
 	    //runTime++;
 
-	    Info << "Write mesh to " << runTime.timeName() << endl;
+	    Info << "Write mesh and updated field to " << runTime.timeName() << endl;
+
+		runTime.write();
 
 		if(meshPtr.valid())
 		{
-	        meshPtr().write(); // <- does this write T, as T is registered with newMesh? no!
+	        //meshPtr().write(); // <- does this write T, as T is registered with newMesh? no!
 		}
 
-		
 		if (TPtr.valid())
 		{
-			TPtr().write();
+			//TPtr().write();
 		}
 	}
 }
