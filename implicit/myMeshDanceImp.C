@@ -38,6 +38,7 @@ ali@tensorfields.com
 #include "dimensionedVector.H"
 #include "dimensionSets.H"
 #include "fvc.H"
+#include "fvm.H"
 //#include "boundaryMesh.H"
 //#include "fvBoundaryMesh.H"
 //#include "meshReader.H"
@@ -140,16 +141,17 @@ volScalarField advectField
 	//
 	// Implicit
 	//
-    fvScalarMatrix TEq
-	(
-	    fvm::ddt(T) == fvc::ddt(T) /*- fvm::div(phi, T)*/ + fvm::div(meshPtr().phi(), T)
-	);
+	
+    //fvScalarMatrix TEq
+	//(
+	//    fvm::ddt(T) == fvc::ddt(T) /*- fvm::div(phi, T)*/ + fvm::div(meshPtr().phi(), T)
+	//);
 
-	TEq.solve();
+	//TEq.solve();
 
-	T.correctBoundaryConditions();
+	//T.correctBoundaryConditions();
 
-	return T;
+	//return T;
 }
 
 // Calc/Assume new mesh points (only internal points, not boundary points)
@@ -301,7 +303,7 @@ int main(int argc, char* argv[])
 	// Read the existing scalar field
 	Info << "Read the existing scalar field" << endl;
 
-	autoPtr<volScalarField> T//OldPtr
+	autoPtr<volScalarField> TPtr//OldPtr
 	(
 	    new volScalarField
 	    (
@@ -433,12 +435,12 @@ int main(int argc, char* argv[])
 
         fvScalarMatrix TEq
 	    (
-	        fvm::ddt(T) == fvc::ddt(T) /*- fvm::div(phi, T)*/ + fvm::div(meshPtr().phi(), T)
+	        fvm::ddt(TPtr()) == fvc::ddt(TPtr()) /*- fvm::div(phi, T)*/ + fvm::div(meshPtr().phi(), TPtr())
 	    );
 
 	    TEq.solve();
 
-	    T.correctBoundaryConditions();
+	    TPtr().correctBoundaryConditions();
 
 	    //runTime++;
 
@@ -449,12 +451,12 @@ int main(int argc, char* argv[])
 	        meshPtr().write(); // <- does this write T, as T is registered with newMesh? no!
 		}
 
-		/*
+		
 		if (TPtr.valid())
 		{
 			TPtr().write();
 		}
-		*/
+		
 
 	    //Info << "Write field to " << runTime.timeName() << endl;
 		//TPtr().write();
