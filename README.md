@@ -7,7 +7,7 @@ A code to read a scalar field on a particular mesh, move the mesh nodes while pr
 Writing the integral transport equation for a variable $T$ leads to
 
 $$
-\frac{d}{dt}\int_{AR}\rho T \mathrm{d}V = \int_{AR} \rho \frac{\mathrm{d}T}{\mathrm{d}t}\mathrm{d}V + \int_{AR}\rho T n_i ({u_b}_i - {u_b})\mathrm{d}S
+\frac{d}{dt}\int_{AR}\rho T \mathrm{d}V = \int_{AR} \rho \frac{\mathrm{d}T}{\mathrm{d}t}\mathrm{d}V + \int_{AR}\rho T n_i ({u_b}_i - {u}_i)\mathrm{d}S
 $$
 
 where $AR$ is an arbitrary region, $u_i$ is the material velocity, and ${u_{b_i}}$ is the boundary velocity for the arbitrary region. 
