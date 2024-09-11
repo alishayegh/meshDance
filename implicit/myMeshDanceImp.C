@@ -51,109 +51,6 @@ typedef GeometricField<vector, pointPatchField, pointMesh> pointVectorField;
 
 typedef GeometricField<vector, fvPatchField, volMesh> volVectorField;
 
-// Move mesh (with corresponding field T) to newMesh and calc Tnew
-volScalarField advectField
-(
-    const volScalarField& T,
-	const fvMesh& mesh,
-	//const fvMesh& newMesh,
-	const pointVectorField& Ub,
-	const volVectorField& U,
-	const Time& runTime
-)
-{
-	/*
-	tmp<IOobject> tIO (new IOobject 
-	                       (
-	                           T.name(), 
-	                       	   runTime.timeName(), 
-	                       	   newMesh, 
-	                       	   IOobject::NO_READ, 
-	                       	   IOobject::AUTO_WRITE
-					       )
-	                   );
-	*/
-
-	/*
-	IOobject IO 
-	(
-	    T.name(), 
-		runTime.timeName(), 
-		newMesh, 
-		IOobject::NO_READ, 
-		IOobject::AUTO_WRITE
-	);
-
-    tmp<volScalarField> Tnew (new volScalarField
-	                              (
-								      //tIO(), 
-								      IO, 
-									  newMesh,
-									  dimensionedScalar("0", T.dimensions(), 0)
-								  )
-						     );
-	*/
-
-    //const cellList& cells = newMesh.cells();
-
-	//
-	// Explicit
-	//
-
-	//forAll(cells, cellI)
-	//{
-	//	Tnew().internalField()[cellI] = T.internalField()[cellI] * mesh.V()[cellI];
-
-	//    const cell& cell = cells[cellI];
-
-	//    forAll(cell, faceI)
-	//	{
-	//		const face& cellFace = mesh.faces()[cell[faceI]];
-	//		Tnew().internalField()[cellI] +=
-	//		(
-	//		    // T on face
-    //            (fvc::interpolate(T)())[cell[faceI]] // <- Unconditionally unstable
-	//		    //0;
-
-	//		    // face area
-	//		  * cellFace.normal(mesh.points())
-
-	//		  & (
-	//		      	// boundary velocity
-    //                cellFace.average(mesh.points(), Ub) 
-	//			    // material velocity
-    //              //- cellFace.average(mesh.points(), U) 
-	//	        )
-	//		  * runTime.deltaT()
-	//		).value();
-
-	//		//        /*newMesh.cells()[cellI][faceI] <- Does not return a face, but faceLabel*/
-
-	//		//	    (fvc::interpolate(Ub)())[mesh.cells()[cellI][faceI]] // <- Error: No matching for interpolate pointVectorField
-	//	}
-
-	//	//Tnew() += 
-	//	//((fvc::ddt(T)())[cellI] * /* mesh.V()[cellI]*/  runTime.deltaT());//value();
-
-	//    Tnew().internalField()[cellI] /= (VSMALL + newMesh.V()[cellI]); 
-	//}
-
-	//
-	// Implicit
-	//
-	
-    //fvScalarMatrix TEq
-	//(
-	//    fvm::ddt(T) == fvc::ddt(T) /*- fvm::div(phi, T)*/ + fvm::div(meshPtr().phi(), T)
-	//);
-
-	//TEq.solve();
-
-	//T.correctBoundaryConditions();
-
-	//return T;
-}
-
 // Calc/Assume new mesh points (only internal points, not boundary points)
 pointField newPoints(const fvMesh& mesh)
 {
@@ -202,53 +99,6 @@ pointField newPoints(const fvMesh& mesh)
 
 	return pfPtr();
 }
-
-/*
-pointVectorField Ub
-(
-	const fvMesh& newMesh,
-	const fvMesh& mesh,
-	const Time& runTime
-)
-{
-	// Calculate cell face velocity field
-	pointMesh pMesh(mesh);
-
-	tmp<pointVectorField> tUb
-	(
-	    new pointVectorField
-	    (
-	        IOobject
-	    	(
-	    	    "Ub",
-	    		runTime.timeName(),
-	    		mesh
-			),
-	    	pMesh,
-	    	dimensionedVector("Ub", dimLength/dimTime, vector::zero)//,
-	    )
-	);
-
-	const label nMesh = mesh.points().size();
-	const label nNewMesh = newMesh.points().size();
-
-	Info << "Read/Calculate/Assume mesh velocity field" << endl;
-	forAll(tUb(), UbI)
-	{
-	    if(UbI > nMesh || UbI > nNewMesh)
-		{
-		    FatalErrorIn("Ub size") << exit(FatalError);
-		}
-
-	    tUb().internalField()[UbI][0] = ((newMesh.points()[UbI][0] - mesh.points()[UbI][0]) / (VSMALL + runTime.deltaT().value()));//.value();
-	    tUb().internalField()[UbI][1] = ((newMesh.points()[UbI][1] - mesh.points()[UbI][1]) / (VSMALL + runTime.deltaT().value()));//.value();
-	    tUb().internalField()[UbI][2] = ((newMesh.points()[UbI][2] - mesh.points()[UbI][2]) / (VSMALL + runTime.deltaT().value()));//.value();
-	}
-	//Info << "Ub.size() = " << Ub.size() << endl;
-
-	return tUb();
-}
-*/
 
 int main(int argc, char* argv[])
 {
@@ -319,112 +169,14 @@ int main(int argc, char* argv[])
 	    )
 	);
 
-	//autoPtr<boundaryMesh> bMeshPtr(new boundaryMesh);//(mesh.boundaryMesh().size()); // <- no such
-
 	// Create boundaries to be added to the newMesh
 	Info << "Init list of patch pointers" << endl;
-
-	List<polyPatch*> patches(meshPtr().boundaryMesh().size());
 
 	//scalar maxIter(10);
 
 	while (runTime.run())
 	{
 	    runTime++;
-	    // Create the new mesh
-
-		//if(meshPtr.valid())
-		//{
-			
-		/*
-		Info << "Create the new mesh" << endl;
-		autoPtr<fvMesh> newMeshPtr
-		(
-		    new fvMesh
-	        (
-	        	meshIO,
-	        	xferCopy(newPoints(meshPtr())),
-				//faces,
-				//owners,
-				//neighbours
-                xferCopy(meshPtr().faces()),
-                xferCopy(meshPtr().faceOwner()),
-                xferCopy(meshPtr().faceNeighbour())
-	        )
-		);
-		*/
-
-		/*
-		if(newMeshPtr.valid())
-		{
-		    Info << "newMeshPtr assigned successfully" << endl;
-		}
-		else
-		{
-		    FatalErrorIn("newMeshPtr is not set")
-		        << exit(FatalError);
-		}
-		*/
-		//}
-		//else
-		//{
-		    //autoPtr<fvMesh> newMeshPtr;
-
-		    //FatalErrorIn("meshPtr is not valid")
-			//    << exit(FatalError);
-		//}
-
-		//if(newMeshPtr.valid())
-		//{
-		//newMeshPtr -> boundaryMesh().transfer(meshPtr().boundaryMesh()); // <- Error: discards qualifiers
-
-		/*
-	    Info << "Create the list of patch pointers" << endl;
-		
-	    forAll(patches, patchI)
-	    {
-	        patches[patchI] = meshPtr().boundaryMesh()[patchI].clone(newMeshPtr->boundaryMesh()).ptr();
-
-	    	//&meshPtr().boundaryMesh()[patchI]; // <- Error: const to non-const conversion
-	    }
-
-        Info << "Add patches" << endl;
-	    //newMeshPtr().addFvPatches(meshReader::polyBoundaryPatches(meshPtr())); // <- the function can be used for objects of type meshReader only
-	    newMeshPtr->addFvPatches(patches);
-
-		meshPtr.reset(newMeshPtr.ptr());
-		*/
-
-		//}
-		//else
-		//{
-		//    FatalErrorIn("newMeshPtr is not valid")
-		//	    << exit(FatalError);
-		//}
-	    
-        //autoPtr<volScalarField> TPtr;
-
-		//(TOldPtr.valid() /*&& newMeshPtr.valid()*/)
-		
-		/*
-        autoPtr<volScalarField> TPtr 
-		(
-		    new volScalarField
-    	    (
-    	        //tIO(), 
-	            IOobject
-		        (
-		            TOldPtr().name(),
-		        	runTime.timeName(),
-		        	newMeshPtr(),
-		        	IOobject::NO_READ,
-		        	IOobject::AUTO_WRITE
-		        ),
-    	   	    newMeshPtr(),
-    	   	    dimensionedScalar("0", TOldPtr().dimensions(), 0)
-    	    )
-    	);
-		*/
 
 		meshPtr().movePoints(newPoints(meshPtr()));
 		
@@ -456,36 +208,5 @@ int main(int argc, char* argv[])
 		{
 			TPtr().write();
 		}
-		
-
-	    //Info << "Write field to " << runTime.timeName() << endl;
-		//TPtr().write();
-	                 // Sorry! yes! Previously Tnew was registered with mesh, not newMesh!
-
-		// Update mesh and field pointers
-		//TOldPtr = TPtr;
-		//TOldPtr.reset(TPtr.ptr());
-
-		/*
-		if(!TOldPtr.valid())
-		{
-		    FatalErrorIn("TOldPtr not valid")
-			    << exit(FatalError);
-		}
-		*/
-
-		//meshPtr.reset(newMeshPtr.ptr());  
-		//meshPtr = newMeshPtr; // <- Causes newMeshPtr become invalid
-		//meshPtr = newMeshPtr; // <- segfaults at the second iter
-		//meshPtr.reset(newMeshPtr); // <- Error: no matching function
-		/*
-		meshPtr.reset(newMeshPtr.ptr()); 
-
-		if(!meshPtr.valid())
-		{
-		    FatalErrorIn("meshPtr not valid")
-			    << exit(FatalError);
-		}
-		*/
 	}
 }
