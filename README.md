@@ -41,7 +41,7 @@ $$
 ## Directories
 *explicit_* and *implicit_scalar* support only one scalar field called `T`.
 
-Under development: *explicit* and *implicit* are supposed to support any fields with arbitrary names. 
+Under development: *explicit* and *implicit* are supposed to support any number of fields with arbitrary names. 
 ## Example
 ![](https://github.com/alishayegh/meshDance/blob/master/figures/ALE_cavity_meshOnly.gif)  
 
