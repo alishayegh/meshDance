@@ -38,6 +38,10 @@ $$
 {{T}^N} = \frac{1}{V^N}[{(TV)}^o + [\sum_f T S_i {u_b}_i]{\Delta t}]
 $$
 
+## Directories
+*explicit_* and *implicit_scalar* support only one scalar field called `T`.
+
+Under development: *explicit* and *implicit* are supposed to support any fields with arbitrary names. 
 ## Example
 ![](https://github.com/alishayegh/meshDance/blob/master/figures/ALE_cavity_meshOnly.gif)  
 
