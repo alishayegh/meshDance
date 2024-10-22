@@ -47,6 +47,8 @@
 //#include "boundaryMesh.H"
 //#include "fvBoundaryMesh.H"
 //#include "meshReader.H"
+/** forAllIter definition */
+//#include "UList.H"
 
 using namespace Foam;
 
@@ -88,7 +90,7 @@ pointField avgPoints(const fvMesh& mesh, const Time& runTime)
 
 	pointMesh pMesh(mesh);
 
-	int N = mesh.nPoints();
+	//int N = mesh.nPoints();
 
 	pointVectorField allPoints
 	(
@@ -231,6 +233,104 @@ pointField newPoints(const fvMesh& mesh)
 	return pfPtr();
 }
 
+template<class Type>
+void AdvectFields
+(
+    //const autoPtr<fvMesh> meshPtr
+    const fvMesh& mesh
+)
+{
+	/** Read time from mesh */
+	const Time& runTime = mesh.db().time(); // RHS in const
+	//Time& runTime = mesh.time(); //?
+
+	HashTable
+	<
+        const GeometricField<Type, fvPatchField, volMesh>*
+	>
+	fields
+	(
+	    mesh.thisDb().objectRegistry::template lookupClass 
+	    <
+            GeometricField<Type, fvPatchField, volMesh>
+	    > ()
+	);
+
+	typename 
+	HashTable
+	<
+        const GeometricField<Type, fvPatchField, volMesh>*
+	>::iterator fieldIter;
+	
+	/*
+	forAllIter
+	(
+        HashTable<const GeometricField <Type, fvPatchField, volMesh>* >,
+		fields,
+		fieldI
+	)
+	*/
+	for
+	(
+	    fieldIter = fields.begin();
+		fieldIter != fields.end();
+		++fieldIter
+	)
+	{
+	    GeometricField<Type, fvPatchField, volMesh>& field =
+		const_cast
+		<
+		    GeometricField<Type, fvPatchField, volMesh>&
+		>(*fieldIter());
+
+		IOobject fieldIOobject
+        (
+	        field.name(),
+	        runTime.timeName(),
+	        mesh,
+	        IOobject::MUST_READ,
+	        IOobject::AUTO_WRITE
+	    );
+
+		/*
+	    autoPtr
+		<
+		    GeometricField<Type, fvPatchField, volMesh>
+		> TPtr//OldPtr
+	    (
+	        new GeometricField<Type, fvPatchField, volMesh>
+	        (
+	            fieldIOobject,
+	        	mesh,
+				dimensioned<Type>
+				(
+				    "zero",
+					field.dimensions(),
+					pTraits<Type>::zero
+				)
+	        )
+	    );
+		*/
+
+	    Info << "Calculate the new values for the scalar field" << endl;
+
+	    //TPtr.reset(new volScalarField(advectField(TOldPtr(), mesh, newMeshPtr(), Ub(newMeshPtr(), mesh, runTime), U, runTime)));
+
+        //fvScalarMatrix TEq
+        fvScalarMatrix fieldEq
+	    (
+	        //fvm::ddt(TPtr()) == /*fvc::ddt(TPtr()) - fvm::div(phi, TPtr()) +*/ fvm::div(mesh.phi(), TPtr())
+	        fvm::ddt(field) == /*fvc::ddt(TPtr()) - fvm::div(phi, TPtr()) +*/ fvm::div(mesh.phi(), field)
+	    );
+
+	    //TEq.solve();
+	    fieldEq.solve();
+
+	    //TPtr().correctBoundaryConditions();
+	    field.correctBoundaryConditions();
+	}
+}
+
 int main(int argc, char* argv[])
 {
 	// Create time
@@ -261,11 +361,13 @@ int main(int argc, char* argv[])
 		IOobject::NO_WRITE
 	);
 
-	//fvMesh mesh(meshIO);
+	fvMesh mesh(meshIO);
+	/*
     autoPtr<fvMesh> meshPtr
 	(
 	    new fvMesh(meshIO)
 	);
+	*/
 
 	// Read material velocity
 	volVectorField U
@@ -274,10 +376,10 @@ int main(int argc, char* argv[])
 		(
 		    "U",
 			runTime.timeName(),
-			meshPtr(),
+			mesh,
 			IOobject::READ_IF_PRESENT
 		),
-		meshPtr(),
+		mesh,
 		dimensionedVector("0", dimLength/dimTime, vector::zero)
 	);
 
@@ -291,60 +393,16 @@ int main(int argc, char* argv[])
         (
             "phi",
             runTime.timeName(),
-            meshPtr(),
+            mesh,
             IOobject::READ_IF_PRESENT,
             IOobject::AUTO_WRITE
         ),
-        linearInterpolate(U) & meshPtr().Sf()
+        linearInterpolate(U) & mesh.Sf()
     );
 
 	// Read the existing scalar field
 	Info << "Read the existing fields" << endl;
 
-	/** To be moved to a standalone function..? */
-	HashTable
-	<
-        const GeometricField<Type, fvPatchField, volMesh>*
-	>
-	fields
-	(
-	    mesh.thisDb().objectRegistry::template lookupClass 
-	    <
-            GeometricField<Type, fvPatchField, volMesh>
-	    > ()
-	);
-
-	/*
-	typename 
-	HashTable
-	<
-        const GeometricField<Type, fvPatchField, volMesh>*
-	>::iterator fieldIter;
-	*/
-	
-	forAllIter
-	(
-        HashTable<const GeometricField <Type, fvPatchField, volMesh>* >,
-		fields,
-		fieldI
-	)
-	{
-	    autoPtr<volScalarField> TPtr//OldPtr
-	    (
-	        new volScalarField
-	        (
-	            IOobject
-	        	(
-	        	    "T",
-	        		runTime.timeName(),
-	        		meshPtr(),
-	        		IOobject::MUST_READ,
-	        		IOobject::AUTO_WRITE
-	        	),
-	        	meshPtr()
-	        )
-	    );
-	}
 
 	// Create boundaries to be added to the newMesh
 	Info << "Init list of patch pointers" << endl;
@@ -355,37 +413,18 @@ int main(int argc, char* argv[])
 	{
 	    runTime++;
 
-		meshPtr().movePoints(avgPoints(meshPtr(), runTime));
-		//meshPtr().movePoints(newPoints(meshPtr()));
+		//mesh.movePoints(avgPoints(mesh, runTime));
+		mesh.movePoints(newPoints(mesh));
 		
 	    // Advect field
-	    Info << "Calculate the new values for the scalar field" << endl;
-
-	    //TPtr.reset(new volScalarField(advectField(TOldPtr(), meshPtr(), newMeshPtr(), Ub(newMeshPtr(), meshPtr(), runTime), U, runTime)));
-
-        fvScalarMatrix TEq
-	    (
-	        fvm::ddt(TPtr()) == /*fvc::ddt(TPtr()) - fvm::div(phi, TPtr()) +*/ fvm::div(meshPtr().phi(), TPtr())
-	    );
-
-	    TEq.solve();
-
-	    TPtr().correctBoundaryConditions();
+		AdvectFields<scalar>(mesh/*Ptr()*/);
+		//AdvectFields<vector>(meshPtr/*()*/);
+		//AdvectFields<tensor>(meshPtr/*()*/);
 
 	    //runTime++;
 
 	    Info << "Write mesh and updated field to " << runTime.timeName() << endl;
 
 		runTime.write();
-
-		if(meshPtr.valid())
-		{
-	        //meshPtr().write(); // <- does this write T, as T is registered with newMesh? no!
-		}
-
-		if (TPtr.valid())
-		{
-			//TPtr().write();
-		}
 	}
 }
