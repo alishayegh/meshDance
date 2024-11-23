@@ -1,44 +1,46 @@
 template<class Type>
 void AdvectFields
 (
-    //const autoPtr<fvMesh> meshPtr
-    const fvMesh& mesh
-)
-{
-	/** Read time from mesh */
-	const Time& runTime = mesh.db().time(); // RHS in const
-
-	Info << "runTime in AdvectFields = " << runTime.timeName() << endl;
-	//Time& runTime = mesh.time(); //?
-
+	
 	HashTable
 	<
         const GeometricField<Type, fvPatchField, volMesh>*
-	>
-	fields
-	(
-	    mesh.thisDb().objectRegistry::template lookupClass 
-	    <
-            GeometricField<Type, fvPatchField, volMesh>
-	    > ()
-	);
-
-	Info << "fields: " << fields << endl;
+	>& fields,
+	const fvMesh& mesh
+)
+{
+	/** Read fields from the first time step */
+	//HashTable
+	//<
+    //    const GeometricField<Type, fvPatchField, volMesh>*
+	//>
+	//fields
+	//(
+	//    mesh.thisDb().objectRegistry::template lookupClass 
+	//    <
+    //        GeometricField<Type, fvPatchField, volMesh>
+	//    > ()
+	//);
 
 	typename 
 	HashTable
 	<
         const GeometricField<Type, fvPatchField, volMesh>*
 	>::iterator fieldIter;
-	
-	/*
-	forAllIter
-	(
-        HashTable<const GeometricField <Type, fvPatchField, volMesh>* >,
-		fields,
-		fieldI
-	)
-	*/
+
+	///** Read the first field */
+	//GeometricField<Type, fvPatchField, volMesh>& field =
+	//const_cast
+	//<
+	//    GeometricField<Type, fvPatchField, volMesh>&
+	//>(*fields.begin()());
+
+	///** Read mesh from the first field */
+	//fvMesh& mesh = field.parent();
+
+	/** Read time from mesh */
+	const Time& runTime = mesh.time(); // From objectRegistry.H
+
 	for
 	(
 	    fieldIter = fields.begin();
@@ -47,45 +49,12 @@ void AdvectFields
 	)
 	{
 	    GeometricField<Type, fvPatchField, volMesh>& field =
-		const_cast
-		<
-		    GeometricField<Type, fvPatchField, volMesh>&
-		>(*fieldIter());
-
-		Info << "Field read: " << field.name() << endl;
-
-		IOobject fieldIOobject
-        (
-	        field.name(),
-	        runTime.timeName(),
-	        mesh,
-	        IOobject::MUST_READ,
-	        IOobject::AUTO_WRITE
-	    );
-
-		/*
-	    autoPtr
-		<
-		    GeometricField<Type, fvPatchField, volMesh>
-		> TPtr//OldPtr
-	    (
-	        new GeometricField<Type, fvPatchField, volMesh>
-	        (
-	            fieldIOobject,
-	        	mesh,
-				dimensioned<Type>
-				(
-				    "zero",
-					field.dimensions(),
-					pTraits<Type>::zero
-				)
-	        )
-	    );
-		*/
+	    const_cast
+	    <
+	        GeometricField<Type, fvPatchField, volMesh>&
+	    >(*fieldIter());
 
 	    Info << "Calculate the new values for the scalar field" << endl;
-
-	    //TPtr.reset(new volScalarField(advectField(TOldPtr(), mesh, newMeshPtr(), Ub(newMeshPtr(), mesh, runTime), U, runTime)));
 
         //fvScalarMatrix TEq
         fvScalarMatrix fieldEq
@@ -99,5 +68,13 @@ void AdvectFields
 
 	    //TPtr().correctBoundaryConditions();
 	    field.correctBoundaryConditions();
+
+        Info<< "Write "
+	        << field.name()
+	    	<< " to " 
+	        << runTime.timeName()
+	    	<< endl;
+
+	    field.write();
 	}
 }

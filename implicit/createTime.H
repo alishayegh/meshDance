@@ -1,13 +1,12 @@
-	// Create time
-    argList args(argc, argv);
+// Create time
+argList args(argc, argv);
 
-	Time runTime
-	(
-	    "controlDict",
-		args.rootPath(),
-		args.caseName(),
-		"system",
-		"constant",
-		!args.optionFound("noFunctionObjects")
-	);
-
+Time runTime
+(
+    "controlDict",
+	args.rootPath(),
+	args.caseName(),
+	"system",
+	"constant",
+	!args.optionFound("noFunctionObjects")
+);
