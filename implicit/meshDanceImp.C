@@ -60,172 +60,136 @@ typedef GeometricField<vector, fvPatchField, volMesh> volVectorField;
 
 typedef HashTable
         <
-            const GeometricField
-        	<scalar, fvPatchField, volMesh>*
+         const GeometricField <scalar, fvPatchField, volMesh>*
         > ScalarFields;
 
 #include "newPoints.H"
+//#include "CreateFields.H"
+//#include "AdvectFields.H"
+#include "CreateAndAdvectFields.H"
 
-/// Read fields
-#include "ReadFields.H"
-//{
-    /** Read fields from the first time step */
-    //HashTable
-    //<
-    //    const GeometricField
-	//	<Type, fvPatchField, volMesh>*
-    //>
-    //fields
-    //(
-    //    mesh.thisDb().objectRegistry::template lookupClass 
-    //    <
-    //        GeometricField
-	//		<Type, fvPatchField, volMesh>
-    //    > ()
-    //);
-
-    //typename 
-    //HashTable
-    //<
-    //    const GeometricField<Type, fvPatchField, volMesh>*
-    //>::iterator fieldIter;
-
-    /** Read the first field */
-    //GeometricField<Type, fvPatchField, volMesh>& field =
-    //const_cast
-    //<
-    //    GeometricField<Type, fvPatchField, volMesh>&
-    //>(*fields.begin()());
-
-    ///** Read mesh from the first field */
-    //fvMesh& mesh = field.parent();
-
-    /** Read time from mesh */
-    //const Time& runTime = mesh.time(); // From objectRegistry.H
-
-    //for
-    //(
-    //    fieldIter = fields.begin();
-    //    fieldIter != fields.end();
-    //    ++fieldIter
-    //)
-    //{
-    //    GeometricField<Type, fvPatchField, volMesh>& field =
-    //    const_cast
-    //    <
-    //        GeometricField<Type, fvPatchField, volMesh>&
-    //    >(*fieldIter());
-
-    //    Info << "Field read: " << field.name() << endl;
-
-    //    IOobject fieldIOobject
-    //    (
-    //        field.name(),
-    //        runTime.timeName(),
-    //        mesh,
-    //        IOobject::MUST_READ,
-    //        IOobject::AUTO_WRITE
-    //    );
-    //}
-//}
-
-/// Advect fields
-#include "AdvectFields.H"
+/**
+ * Algorithm:
+ *
+ * Read fields every time step, advect them in the
+ * memory; write to the disk every time step,
+ * update fields by reading them again 
+ * from the disk.
+ *
+ * For fields to get updated you need to write
+ * every field to the disk and read it again,
+ * because `fields` is a HashTable of const 
+ * `field`s.
+ * 
+ * .--> Read fields from the disk into `fields`
+ * |    container
+ * |    |
+ * |    V
+ * |    for `field` in `fields`
+ * |    |
+ * |    .-> const-cast every single field into 
+ * |  	    `field` container
+ * |        |
+ * |        V
+ * |        Advect `field`
+ * |        |
+ * |        V
+ * |    .-- Write `field`
+ * |    |
+ * |    V
+ * .-<- Next timestep
+ *
+ * Possible alternative algorithms: 
+ *
+ * Read fields only once, and advect them in the
+ * memory; update fields in the memory after
+ * advection; write based on time controls.
+ *
+ *      Read fields from the disk into `fields`
+ *      container
+ *      |
+ *      V
+ * .--> for `field` in `fields`
+ * |    |
+ * |    .-> const-cast every single field into 
+ * |  	    `field` container
+ * |        |
+ * |        V
+ * |        Advect `field`
+ * |        |
+ * |        V
+ * |    .-- Update `fields`
+ * |    |
+ * |    V
+ * |    Write `fields`
+ * |    |
+ * |    V
+ * .-<- Next timestep
+ */
 
 int main(int argc, char* argv[])
 {
     #include "createTime.H"
     #include "createMesh.H"
 
-	/// Read fields from the disk
-    //#include "createFields.H"
-	//HashTable
-	//<
-    //    const GeometricField<Type, fvPatchField, volMesh>*
-	//>& fields 
-    //=
-	//mesh.thisDb().objectRegistry::template lookupClass
-	//<
-    //    GeometricField<Type, fvPatchField, volMesh>
-	//> ();
+    //IOobjectList objects(mesh, runTime.timeName());
+        
+	   /// Create fields, register them with 'mesh'
+    //CreateFields<scalar>(objects, mesh);
 
-	/**
-	 * Algorithm:
-     *
-	 * Read fields every time step, advect them in the
-	 * memory; write to the disk every time step,
-	 * update fields by reading the again 
-	 * from the disk.
-	 *
-	 * For fields to get updated you need to write
-	 * every field to the disk and read it again,
-	 * because fields is a HashTable of const 
-	 * `field`s.
-	 * 
-	 * .--> Read fields from the disk into `fields`
-	 * |    container
-	 * |    |
-	 * |    V
-	 * |    for `field` in `fields`
-     * |    |
-	 * |    .-> const-cast every single field into 
-	 * |  	    `field` container
-	 * |        |
-	 * |        V
-	 * |        Advect `field`
-	 * |        |
-	 * |        V
-	 * |    .-- Write `field`
-	 * |    |
-	 * |    V
-	 * .-<- Next timestep
-     *
-	 * Possible alternative algorithms: 
-	 *
-	 * Read fields only once, and advect them in the
-	 * memory; update fields in the memory after
-	 * advection; write based on time controls.
-     *
-	 *      Read fields from the disk into `fields`
-	 *      container
-	 *      |
-	 *      V
-	 * .--> for `field` in `fields`
-     * |    |
-	 * |    .-> const-cast every single field into 
-	 * |  	    `field` container
-	 * |        |
-	 * |        V
-	 * |        Advect `field`
-	 * |        |
-	 * |        V
-	 * |    .-- Update `fields`
-	 * |    |
-	 * |    V
-	 * |    Write `fields`
-	 * |    |
-	 * |    V
-	 * .-<- Next timestep
-	 */
+	   //Info<< "Fields created." 
+	   //    << endl;
 
-    while (runTime.run())
+	   /// Create IOobjects from existing field files
+    IOobjectList objects(mesh, runTime.timeName());
+
+    while (/*runTime.run()*/runTime.loop())
     {
-        runTime++;
+		      // Force V allocation for V0 to be stored
+		      //const scalar totalVol = gSum(mesh.V());
+
         //mesh.movePoints(avgPoints(mesh, runTime));
         //mesh.movePoints(newPoints(mesh));
         
-        ScalarFields fields = 
-		ReadFields<scalar>(mesh);
+		      Info<< "Time = "
+		      	<< runTime.timeName()
+		      	<< endl;
+
+        //ScalarFields sFields = 
+
+        //HashTable
+        //<
+        //    GeometricField<scalar, fvPatchField, volMesh>
+        //> sFields = ReadFields<scalar>(runTime, mesh);
+
+								//runTime++; // Only necessary with runTime.run()
 
         // Advect fields
-        AdvectFields<scalar>
+        CreateAndAdvectFields<scalar>
         (
-            fields, 
-			//ReadFields<scalar>(mesh),
-			mesh
+			         objects,
+			         mesh
         );
 
-        //runTime.write(); // Moved to AdvectFields
+								//Info<< "mesh.toc() after creating fields:"
+								//    << mesh.toc()
+								//				<< endl;
+
+		      //Info<< "Fields advected." 
+		      //    << endl;
+
+		      //mesh.write(); 
+								// Time dirs written only when mesh changes (what if feild changes?)
+
+        runTime.write();// Time dirs written without fields
+        //mesh.write();// Time dirs written without fields
+
+								Info<< "Fields written to "
+								    << runTime.timeName()
+												<< endl;
+
         //T.write();
+		
+		      //mesh["T"]->write(); // Magic :]
     }
 }
