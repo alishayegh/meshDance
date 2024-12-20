@@ -88,7 +88,7 @@ typedef HashTable
  * |    for `field` in `fields`
  * |    |
  * |    .-> const-cast every single field into 
- * |  	    `field` container
+ * |        `field` container
  * |        |
  * |        V
  * |        Advect `field`
@@ -112,7 +112,7 @@ typedef HashTable
  * .--> for `field` in `fields`
  * |    |
  * |    .-> const-cast every single field into 
- * |  	    `field` container
+ * |        `field` container
  * |        |
  * |        V
  * |        Advect `field`
@@ -134,26 +134,26 @@ int main(int argc, char* argv[])
 
     //IOobjectList objects(mesh, runTime.timeName());
         
-	   /// Create fields, register them with 'mesh'
+    /// Create fields, register them with 'mesh'
     //CreateFields<scalar>(objects, mesh);
 
-	   //Info<< "Fields created." 
-	   //    << endl;
+    //Info<< "Fields created." 
+    //    << endl;
 
-	   /// Create IOobjects from existing field files
+    /// Create IOobjects from existing field files
     IOobjectList objects(mesh, runTime.timeName());
 
     while (/*runTime.run()*/runTime.loop())
     {
-		      // Force V allocation for V0 to be stored
-		      //const scalar totalVol = gSum(mesh.V());
+        // Force V allocation for V0 to be stored
+        //const scalar totalVol = gSum(mesh.V());
 
         //mesh.movePoints(avgPoints(mesh, runTime));
-        //mesh.movePoints(newPoints(mesh));
+        mesh.movePoints(newPoints(mesh));
         
-		      Info<< "Time = "
-		      	<< runTime.timeName()
-		      	<< endl;
+          Info<< "Time = "
+              << runTime.timeName()
+              << endl;
 
         //ScalarFields sFields = 
 
@@ -162,34 +162,34 @@ int main(int argc, char* argv[])
         //    GeometricField<scalar, fvPatchField, volMesh>
         //> sFields = ReadFields<scalar>(runTime, mesh);
 
-								//runTime++; // Only necessary with runTime.run()
+        //runTime++; // Only necessary with runTime.run()
 
         // Advect fields
         CreateAndAdvectFields<scalar>
         (
-			         objects,
-			         mesh
+               objects,
+               mesh
         );
 
-								//Info<< "mesh.toc() after creating fields:"
-								//    << mesh.toc()
-								//				<< endl;
+        //Info<< "mesh.toc() after creating fields:"
+        //    << mesh.toc()
+        //        << endl;
 
-		      //Info<< "Fields advected." 
-		      //    << endl;
+        //Info<< "Fields advected." 
+        //    << endl;
 
-		      //mesh.write(); 
-								// Time dirs written only when mesh changes (what if feild changes?)
+        //mesh.write(); 
+              // Time dirs written only when mesh changes (what if feild changes?)
 
         runTime.write();// Time dirs written without fields
         //mesh.write();// Time dirs written without fields
 
-								Info<< "Fields written to "
-								    << runTime.timeName()
-												<< endl;
+                Info<< "Fields written to "
+                    << runTime.timeName()
+                    << endl;
 
         //T.write();
-		
-		      //mesh["T"]->write(); // Magic :]
+    
+        //mesh["T"]->write(); // Magic :]
     }
 }

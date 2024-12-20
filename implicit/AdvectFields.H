@@ -1,80 +1,110 @@
 template<class Type>
 void AdvectFields
 (
-	
-	HashTable
-	<
-        const GeometricField<Type, fvPatchField, volMesh>*
-	>& fields,
-	const fvMesh& mesh
+    /*const*/ fvMesh& mesh
 )
 {
-	/** Read fields from the first time step */
-	//HashTable
-	//<
-    //    const GeometricField<Type, fvPatchField, volMesh>*
-	//>
-	//fields
-	//(
-	//    mesh.thisDb().objectRegistry::template lookupClass 
-	//    <
-    //        GeometricField<Type, fvPatchField, volMesh>
-	//    > ()
-	//);
+    //Info<< "AdvectFields started; mesh.toc() = "
+    //    << mesh.toc()
+    //    << endl;
 
-	typename 
-	HashTable
-	<
+    /** Read fields from the first time step */
+    HashTable
+    <
         const GeometricField<Type, fvPatchField, volMesh>*
-	>::iterator fieldIter;
+    >
+    fields
+    (
+        mesh.thisDb().objectRegistry::template lookupClass 
+        <
+            GeometricField<Type, fvPatchField, volMesh>
+        > ()
+    );
 
-	///** Read the first field */
-	//GeometricField<Type, fvPatchField, volMesh>& field =
-	//const_cast
-	//<
-	//    GeometricField<Type, fvPatchField, volMesh>&
-	//>(*fields.begin()());
+    typename 
+    HashTable
+    <
+        const GeometricField<Type, fvPatchField, volMesh>*
+    >::iterator fieldIter;
 
-	///** Read mesh from the first field */
-	//fvMesh& mesh = field.parent();
+    ///** Read the first field */
+    //GeometricField<Type, fvPatchField, volMesh>& field =
+    //const_cast
+    //<
+    //    GeometricField<Type, fvPatchField, volMesh>&
+    //>(*fields.begin()());
 
-	/** Read time from mesh */
-	const Time& runTime = mesh.time(); // From objectRegistry.H
+    ///** Read mesh from the first field */
+    //fvMesh& mesh = field.parent();
 
-	for
-	(
-	    fieldIter = fields.begin();
-		fieldIter != fields.end();
-		++fieldIter
-	)
-	{
-	    GeometricField<Type, fvPatchField, volMesh>& field =
-	    const_cast
-	    <
-	        GeometricField<Type, fvPatchField, volMesh>&
-	    >(*fieldIter());
+    /** Read time from mesh */
+    const Time& runTime = mesh.time(); // From objectRegistry.H
 
-	    Info << "Calculate the new values for the scalar field" << endl;
+    for
+    (
+        fieldIter = fields.begin();
+        fieldIter != fields.end();
+        ++fieldIter
+    )
+    {
+        //autoPtr<GeometricField<Type, fvPatchField, volMesh> >& field =
+        autoPtr<GeometricField<Type, fvPatchField, volMesh> > fieldPtr
+        (
+            const_cast
+            <
+                GeometricField<Type, fvPatchField, volMesh>*
+            >(fieldIter())
+        );
+
+        Info<< "Field "
+            << fieldPtr().name()
+            << " initialized."
+            << endl;
 
         //fvScalarMatrix TEq
         fvScalarMatrix fieldEq
-	    (
-	        //fvm::ddt(TPtr()) == /*fvc::ddt(TPtr()) - fvm::div(phi, TPtr()) +*/ fvm::div(mesh.phi(), TPtr())
-	        fvm::ddt(field) == /*fvc::ddt(TPtr()) - fvm::div(phi, TPtr()) +*/ fvm::div(mesh.phi(), field)
-	    );
+        (
+            //fvm::ddt(TPtr()) == /*fvc::ddt(TPtr()) - fvm::div(phi, TPtr()) +*/ fvm::div(mesh.phi(), TPtr())
+            //fvm::ddt(field) == /*fvc::ddt(TPtr()) - fvm::div(phi, TPtr()) +*/ fvm::div(mesh.phi(), field)
+		    fvm::div(mesh.phi(), fieldPtr())
+         == fvm::ddt(fieldPtr()) /*fvc::ddt(TPtr()) - fvm::div(phi, TPtr()) +*/ 
+        );
 
-	    //TEq.solve();
-	    fieldEq.solve();
+        Info<< "fieldEq "
+            << "created."
+            << endl;
 
-	    //TPtr().correctBoundaryConditions();
-	    field.correctBoundaryConditions();
+        //TEq.solve();
+        fieldEq.solve();
 
-        Info<< "Write "
-	        << field.name()
-	    	<< " to " 
-	        << runTime.timeName()
-	    	<< endl;
+        Info<< "Field " 
+            //<< field().name()
+            << fieldPtr().name()
+            << " advected."
+            << endl;
 
-	    field.write();
-	}
+        //TPtr().correctBoundaryConditions();
+        //field.correctBoundaryConditions();
+        fieldPtr().correctBoundaryConditions();
+
+        Info<< "Boundary condition of " 
+            //<< field().name()
+            << fieldPtr().name()
+            << " corrected."
+            << endl;
+
+        //field.write();
+
+        //Info<< field.name()
+        //    << " written to " 
+        //    << runTime.timeName()
+        //    << endl;
+
+        // Overwrite field
+        mesh.set(fieldPtr().name(), fieldPtr.ptr());
+
+        Info<< fieldPtr().name()
+            << " registered with 'mesh'."
+            << endl;
+    }
 }
