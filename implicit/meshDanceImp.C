@@ -49,6 +49,7 @@
 //#include "meshReader.H"
 /** forAllIter definition */
 //#include "UList.H"
+#include "IOobjectList.H"
 
 using namespace Foam;
 
@@ -64,9 +65,9 @@ typedef HashTable
         > ScalarFields;
 
 #include "newPoints.H"
-//#include "CreateFields.H"
-//#include "AdvectFields.H"
-#include "CreateAndAdvectFields.H"
+#include "CreateFields.H"
+#include "AdvectFields.H"
+//#include "CreateAndAdvectFields.H"
 
 /**
  * Algorithm:
@@ -143,6 +144,17 @@ int main(int argc, char* argv[])
     /// Create IOobjects from existing field files
     IOobjectList objects(mesh, runTime.timeName());
 
+    CreateFields<scalar>(objects, mesh);
+    //CreateAndAdvectFields<scalar>
+    //(
+    //    objects,
+    //    mesh
+    //);
+
+    Info<< "mesh.toc() after create fields:"
+        << mesh.toc()
+        << endl;
+
     while (/*runTime.run()*/runTime.loop())
     {
         // Force V allocation for V0 to be stored
@@ -165,15 +177,21 @@ int main(int argc, char* argv[])
         //runTime++; // Only necessary with runTime.run()
 
         // Advect fields
-        CreateAndAdvectFields<scalar>
-        (
-               objects,
-               mesh
-        );
+        //CreateAndAdvectFields<scalar>
+        //(
+        //       objects,
+        //       mesh
+        //
 
-        //Info<< "mesh.toc() after creating fields:"
-        //    << mesh.toc()
-        //        << endl;
+        Info<< "mesh.toc() before advect fields:"
+            << mesh.toc()
+            << endl;
+
+	AdvectFields<scalar>(mesh);
+
+        Info<< "mesh.toc() after advect fields:"
+            << mesh.toc()
+            << endl;
 
         //Info<< "Fields advected." 
         //    << endl;
@@ -184,9 +202,9 @@ int main(int argc, char* argv[])
         runTime.write();// Time dirs written without fields
         //mesh.write();// Time dirs written without fields
 
-                Info<< "Fields written to "
-                    << runTime.timeName()
-                    << endl;
+        Info<< "Fields written to "
+            << runTime.timeName()
+            << endl;
 
         //T.write();
     
