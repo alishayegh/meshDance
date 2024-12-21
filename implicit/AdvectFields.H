@@ -1,6 +1,8 @@
 template<class Type>
 void AdvectFields(const fvMesh& mesh)
 {
+    typedef GeometricField<Type, fvPatchField, volMesh> fieldType;
+
     HashTable
     <
         const GeometricField<Type, fvPatchField, volMesh>*
@@ -34,8 +36,6 @@ void AdvectFields(const fvMesh& mesh)
 	    >&
 	>(*fieldIter());
 
-        const_cast<objectRegistry&>(mesh.thisDb()).checkOut(field);
-
         fvScalarMatrix fieldEq
         (
             fvm::div(mesh.phi(), field)
@@ -65,22 +65,36 @@ void AdvectFields(const fvMesh& mesh)
         << " corrected."
         << endl;
 
-        const_cast<objectRegistry&>(mesh.thisDb()).checkIn(field);
+        if 
+        (
+            mesh.thisDb().foundObject<fieldType>
+            (word(field.name() + "_0"))
+        )
+        {
+            const_cast<objectRegistry&>(mesh.thisDb()).checkOut
+            (
+                const_cast<fieldType&>
+                (
+                    mesh.thisDb().lookupObject<fieldType>
+                    (word(field.name() + "_0"))
+                )
+            );
+        }
         
-        //Info<< "fieldPtr->sizr():"
-        //<< fieldPtr->size()
-        //<< endl;
-        
-        //if (mesh.time().write())
-        //{
-        //    //fieldPtr->write();
-        //    field.write();
-        //    
-        //    //Info<< fieldPtr->name()
-        //    Info<< field.name()
-        //        << " written to " 
-        //        << mesh.time().timeName()
-        //        << endl;
-        //}
+        if 
+        (
+            mesh.thisDb().foundObject<fieldType>
+            (word(field.name() + "_0_0"))
+        )
+        {
+            const_cast<objectRegistry&>(mesh.thisDb()).checkOut
+            (
+                const_cast<fieldType&>
+                (
+                    mesh.thisDb().lookupObject<fieldType>
+                    (word(field.name() + "_0_0"))
+                )
+            );
+        }
     }
 }
