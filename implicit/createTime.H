@@ -1,6 +1,4 @@
 // Create time
-argList args(argc, argv);
-
 Time runTime
 (
     "controlDict",

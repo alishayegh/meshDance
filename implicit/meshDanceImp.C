@@ -59,14 +59,31 @@ typedef GeometricField<vector, pointPatchField, pointMesh> pointVectorField;
 
 typedef GeometricField<vector, fvPatchField, volMesh> volVectorField;
 
-typedef HashTable
-        <
-         const GeometricField <scalar, fvPatchField, volMesh>*
-        > ScalarFields;
+//typedef HashTable
+//        <
+//         const GeometricField <scalar, fvPatchField, volMesh>*
+//        > ScalarFields;
 
+/// A point motion engine
 #include "newPoints.H"
+
+/// Another point motion engine
+//#include "readNewPoints.H"
+pointField deltaPoints(const fvMesh& startMesh, const fvMesh& targetMesh)
+{
+    /// Calculate displacement increment
+    scalar nTimeSteps = 
+      (
+          startMesh.time().endTime().value() 
+        - startMesh.time().startTime().value()
+      ) / startMesh.time().deltaT().value();
+
+    return (targetMesh.points() - startMesh.points()) / nTimeSteps;
+}
+
 #include "CreateFields.H"
 #include "AdvectFields.H"
+
 //#include "CreateAndAdvectFields.H"
 
 /**
@@ -130,8 +147,33 @@ typedef HashTable
 
 int main(int argc, char* argv[])
 {
+    argList::validArgs.append("Smooth mesh directory name (in constant)");
+
+    argList args(argc, argv);
+
+    const word& smoothMeshDir = args.additionalArgs()[0];
+
     #include "createTime.H"
     #include "createMesh.H"
+
+    /// Calculate mesh motion increments
+    pointField deltaPoint = deltaPoints
+    (
+        mesh,
+        fvMesh
+        (
+            IOobject
+            (
+                smoothMeshDir,
+                runTime.constant(),
+                runTime,
+                IOobject::MUST_READ
+            )
+        )
+    );
+
+    /// Initialize the new points
+    pointField newPoints = mesh.points();
 
     //IOobjectList objects(mesh, runTime.timeName());
         
@@ -151,9 +193,9 @@ int main(int argc, char* argv[])
     //    mesh
     //);
 
-    Info<< "mesh.toc() after create fields:"
-        << mesh.toc()
-        << endl;
+    //Info<< "mesh.toc() after create fields:"
+    //    << mesh.toc()
+    //    << endl;
 
     while (/*runTime.run()*/runTime.loop())
     {
@@ -161,11 +203,17 @@ int main(int argc, char* argv[])
         //const scalar totalVol = gSum(mesh.V());
 
         //mesh.movePoints(avgPoints(mesh, runTime));
-        mesh.movePoints(newPoints(mesh));
+        //mesh.movePoints(newPoints(mesh));
+
+        // Move mesh points
+        newPoints += deltaPoint;
+
+        // Move mesh
+        mesh.movePoints(newPoints);
         
-          Info<< "Time = "
-              << runTime.timeName()
-              << endl;
+        Info<< "Time = "
+            << runTime.timeName()
+            << endl;
 
         //ScalarFields sFields = 
 
@@ -183,21 +231,21 @@ int main(int argc, char* argv[])
         //       mesh
         //
 
-        Info<< "mesh.toc() before advect fields:"
-            << mesh.toc()
-            << endl;
+        //Info<< "mesh.toc() before advect fields:"
+        //    << mesh.toc()
+        //    << endl;
 
 	AdvectFields<scalar>(mesh);
 
-        Info<< "mesh.toc() after advect fields:"
-            << mesh.toc()
-            << endl;
+        //Info<< "mesh.toc() after advect fields:"
+        //    << mesh.toc()
+        //    << endl;
 
         //Info<< "Fields advected." 
         //    << endl;
 
         //mesh.write(); 
-              // Time dirs written only when mesh changes (what if feild changes?)
+        // Time dirs written only when mesh changes (what if feild changes?)
 
         runTime.write();// Time dirs written without fields
         //mesh.write();// Time dirs written without fields

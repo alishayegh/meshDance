@@ -123,14 +123,14 @@ void CreateAndAdvectFields
         
             //patchTypes[patchI] = mesh.boundaryMesh()[patchI].type(); 
         
-        if (field.boundaryField()[patchI].type() != word("calculated"))
-        {
-            patchTypes[patchI] = field.boundaryField()[patchI].type(); 
-        }
-        else
-        {
-            patchTypes[patchI] = word("zeroGradient");
-        }
+            if (field.boundaryField()[patchI].type() != word("calculated"))
+            {
+                patchTypes[patchI] = field.boundaryField()[patchI].type(); 
+            }
+            else
+            {
+                patchTypes[patchI] = word("zeroGradient");
+            }
         
             //ptrListPatchFieldType.set
             //(
@@ -254,5 +254,5 @@ void CreateAndAdvectFields
             << mesh.time().timeName()
             << endl;
             }
-        }
     }
+}
